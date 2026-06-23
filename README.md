@@ -7,11 +7,15 @@ Launch a pre-configured tmux session for development workflows with one command.
 - **tmux** ≥ 3.0
 - **jq** (for config parsing)
 - **zsh** or **bash**
+- **mise** (runtime manager for Node.js and pi)
+- **Node.js** ≥ 22 (managed by mise)
+- **pi** (AI coding assistant, managed by mise)
 
 Install missing dependencies:
 
 ```bash
-brew install tmux jq
+brew install tmux jq mise
+mise install
 ```
 
 ## Quick Start
@@ -27,7 +31,7 @@ This creates `~/.config/red-horse/config.json` with an empty window list. With n
 | Window | Command | Directory |
 |--------|---------|-----------|
 | `llama` | `./run-server.sh` | `~/projects/llama-pi` |
-| `pi` | `mise exec node@22.19.0 -- pi` | `~/projects/red-horse` |
+| `pi` | `pi` (uses mise-managed Node ≥ 22.19.0) | `~/projects/red-horse` |
 
 ### 2. Launch
 
@@ -46,7 +50,7 @@ Edit `~/.config/red-horse/config.json`:
   "session": "red-horse-session",
   "windows": [
     { "dir": "~/projects/llama-pi", "skip_command": true, "name": "llama" },
-    { "dir": "~/projects/red-horse", "command": "mise exec node@22.19.0 -- pi", "name": "pi" },
+    { "dir": "~/projects/red-horse", "command": "pi", "name": "pi" },
     { "dir": "~/projects/my-project", "command": "nvim" },
     { "dir": "~/projects/other-project" }
   ]
@@ -132,7 +136,7 @@ When no windows are defined in config, these two are used:
 | Window | Command | Directory |
 |--------|---------|-----------|
 | `llama` | `cd ~/projects/llama-pi && ./run-server.sh` | `~/projects/llama-pi` |
-| `pi` | `cd ~/projects/red-horse && mise exec node@22.19.0 -- pi` | `~/projects/red-horse` |
+| `pi` | `cd ~/projects/red-horse && pi` | `~/projects/red-horse` |
 
 ## Non-Goals
 

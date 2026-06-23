@@ -14,7 +14,7 @@
 #
 # If no windows are defined in config, defaults are used:
 #   1. llama  → cd ~/projects/llama-pi && ./run-server.sh
-#   2. pi     → mise exec node@$NODE_VERSION -- pi
+#   2. pi     → pi (uses mise-managed Node ≥ $NODE_VERSION)
 
 set -euo pipefail
 
@@ -55,7 +55,7 @@ Config file: ~/.config/red-horse/config.json
 
 If no windows are defined in config (or all are commented out), defaults are used:
   1. llama  → cd ~/projects/llama-pi && ./run-server.sh
-  2. pi     → mise exec node@$NODE_VERSION -- pi
+  2. pi     → pi (uses mise-managed Node ≥ $NODE_VERSION)
 
 To customize, uncomment and edit the example windows in the config:
   {
@@ -120,16 +120,17 @@ has_windows() {
 
 # ─── Node version check ──────────────────────────────────────────────────────
 
-# Verify the required Node version is installed via mise
+# Verify the minimum Node version is installed via mise
 check_node_version() {
   command -v mise >/dev/null 2>&1 || die "mise is required but not installed. Install with: brew install mise"
   local actual_version
-  actual_version=$(mise exec node@$NODE_VERSION -- node --version 2>/dev/null | sed 's/v//')
+  actual_version=$(node --version 2>/dev/null | sed 's/v//')
   if [[ -z "$actual_version" ]]; then
-    die "Node $NODE_VERSION is not installed via mise. Install it with: mise install node@$NODE_VERSION"
+    die "Node.js is not installed or not in PATH. Install with: mise install node@$NODE_VERSION"
   fi
-  if [[ "$actual_version" != "$NODE_VERSION" ]]; then
-    die "Expected Node $NODE_VERSION but found $actual_version. Install the correct version with: mise install node@$NODE_VERSION"
+  # Check that actual_version >= NODE_VERSION (minimum version check)
+  if [[ "$(printf '%s\n%s\n' "$NODE_VERSION" "$actual_version" | sort -V | head -n1)" != "$NODE_VERSION" ]]; then
+    die "Node.js must be ≥ $NODE_VERSION (found $actual_version). Install with: mise install node@$NODE_VERSION"
   fi
 }
 
@@ -156,7 +157,7 @@ get_default_windows() {
   },
   {
     "dir": "~/projects/red-horse",
-    "command": "eval \"$(mise shell node@$NODE_VERSION)\" && set -a && pi && set +a",
+    "command": "pi",
     "name": "pi"
   }
 ]
@@ -217,14 +218,14 @@ cmd_help() {
 
 # ─── --pi ────────────────────────────────────────────────────────────────────
 
-# Node version used by the default pi window
+# Minimum Node version required for pi
 NODE_VERSION="22.19.0"
 
 cmd_pi() {
   check_node_version
   check_pi
   info "Launching pi with node@$NODE_VERSION via mise..."
-  mise exec node@$NODE_VERSION -- pi
+  pi
 }
 
 # ─── Main session creation ───────────────────────────────────────────────────
