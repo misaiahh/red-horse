@@ -1,0 +1,15 @@
+{
+  "session": "red-horse-session",
+  "windows": [
+    {
+      "dir": "~/SideProjects/llama-pi",
+      "skip_command": true,
+      "name": "llama"
+    },
+    {
+      "dir": "~/SideProjects/red-horse",
+      "command": "mise exec -- node@22.15.0 -- pi",
+      "name": "pi"
+    }
+  ]
+}
