@@ -13,8 +13,8 @@
 # Config: ~/.config/red-horse/config.json
 #
 # If no windows are defined in config, defaults are used:
-#   1. llama  → cd ~/SideProjects/llama-pi && ./run-server.sh
-#   2. pi     → mise exec -- node@$NODE_VERSION -- pi
+#   1. llama  → cd ~/projects/llama-pi && ./run-server.sh
+#   2. pi     → mise exec node@$NODE_VERSION -- pi
 
 set -euo pipefail
 
@@ -54,15 +54,15 @@ Usage:
 Config file: ~/.config/red-horse/config.json
 
 If no windows are defined in config, defaults are used:
-  1. llama  → cd ~/SideProjects/llama-pi && ./run-server.sh
-  2. pi     → mise exec -- node@$NODE_VERSION -- pi
+  1. llama  → cd ~/projects/llama-pi && ./run-server.sh
+  2. pi     → mise exec node@$NODE_VERSION -- pi
 
 To customize, create a config with a "windows" array:
   {
     "session": "red-horse-session",
     "windows": [
-      { "dir": "~/SideProjects/my-project", "command": "nvim" },
-      { "dir": "~/SideProjects/other", "command": "top" }
+      { "dir": "~/projects/my-project", "command": "nvim" },
+      { "dir": "~/projects/other", "command": "top" }
     ]
   }
 
@@ -116,13 +116,13 @@ get_default_windows() {
   cat <<EOF
 [
   {
-    "dir": "~/SideProjects/llama-pi",
+    "dir": "~/projects/llama-pi",
     "skip_command": true,
     "name": "llama"
   },
   {
-    "dir": "~/SideProjects/red-horse",
-    "command": "mise exec -- node@$NODE_VERSION -- pi",
+    "dir": "~/projects/red-horse",
+    "command": "mise exec node@$NODE_VERSION -- pi",
     "name": "pi"
   }
 ]
@@ -170,12 +170,12 @@ cmd_help() {
 # ─── --pi ────────────────────────────────────────────────────────────────────
 
 # Node version used by the default pi window
-NODE_VERSION="22.15.0"
+NODE_VERSION="22.19.0"
 
 cmd_pi() {
   command -v mise >/dev/null 2>&1 || die "mise is required but not installed. Install with: brew install mise"
   info "Launching pi with node@$NODE_VERSION via mise..."
-  mise exec -- "node@$NODE_VERSION" -- pi
+  mise exec node@$NODE_VERSION -- pi
 }
 
 # ─── Main session creation ───────────────────────────────────────────────────

@@ -2,13 +2,13 @@
   "session": "red-horse-session",
   "windows": [
     {
-      "dir": "~/SideProjects/llama-pi",
+      "dir": "~/projects/llama-pi",
       "skip_command": true,
       "name": "llama"
     },
     {
-      "dir": "~/SideProjects/red-horse",
-      "command": "mise exec -- node@22.15.0 -- pi",
+      "dir": "~/projects/red-horse",
+      "command": "mise exec -- node@22.19.0 -- pi",
       "name": "pi"
     }
   ]

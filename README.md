@@ -26,8 +26,8 @@ This creates `~/.config/red-horse/config.json` with an empty window list. With n
 
 | Window | Command | Directory |
 |--------|---------|-----------|
-| `llama` | `./run-server.sh` | `~/SideProjects/llama-pi` |
-| `pi` | `mise exec -- node@22.15.0 -- pi` | `~/SideProjects/red-horse` |
+| `llama` | `./run-server.sh` | `~/projects/llama-pi` |
+| `pi` | `mise exec node@22.19.0 -- pi` | `~/projects/red-horse` |
 
 ### 2. Launch
 
@@ -45,10 +45,10 @@ Edit `~/.config/red-horse/config.json`:
 {
   "session": "red-horse-session",
   "windows": [
-    { "dir": "~/SideProjects/llama-pi", "skip_command": true, "name": "llama" },
-    { "dir": "~/SideProjects/red-horse", "command": "mise exec -- node@22.15.0 -- pi", "name": "pi" },
-    { "dir": "~/SideProjects/my-project", "command": "nvim" },
-    { "dir": "~/SideProjects/other-project" }
+    { "dir": "~/projects/llama-pi", "skip_command": true, "name": "llama" },
+    { "dir": "~/projects/red-horse", "command": "mise exec node@22.19.0 -- pi", "name": "pi" },
+    { "dir": "~/projects/my-project", "command": "nvim" },
+    { "dir": "~/projects/other-project" }
   ]
 }
 ```
@@ -87,14 +87,14 @@ Add this to your `~/.zshrc` (or `~/.bashrc`):
 ### Option A: Alias to local script (simplest)
 
 ```bash
-alias rh='bash ~/SideProjects/red-horse/rh.sh'
+alias rh='bash ~/projects/red-horse/rh.sh'
 ```
 
 ### Option B: Put red-horse in PATH
 
 ```bash
 # Add the directory to PATH
-export PATH="$HOME/SideProjects/red-horse:$PATH"
+export PATH="$HOME/projects/red-horse:$PATH"
 ```
 
 Then `rh` works from any directory without the full path.
@@ -113,9 +113,9 @@ Full config file at `~/.config/red-horse/config.json`:
 {
   "session": "red-horse-session",
   "windows": [
-    { "dir": "~/SideProjects/llama-pi", "skip_command": true, "name": "llama" },
-    { "dir": "~/SideProjects/my-project", "command": "nvim" },
-    { "dir": "~/SideProjects/logs" }
+    { "dir": "~/projects/llama-pi", "skip_command": true, "name": "llama" },
+    { "dir": "~/projects/my-project", "command": "nvim" },
+    { "dir": "~/projects/logs" }
   ]
 }
 ```
@@ -131,8 +131,8 @@ When no windows are defined in config, these two are used:
 
 | Window | Command | Directory |
 |--------|---------|-----------|
-| `llama` | `cd ~/SideProjects/llama-pi && ./run-server.sh` | `~/SideProjects/llama-pi` |
-| `pi` | `cd ~/SideProjects/red-horse && mise exec -- node@22.15.0 -- pi` | `~/SideProjects/red-horse` |
+| `llama` | `cd ~/projects/llama-pi && ./run-server.sh` | `~/projects/llama-pi` |
+| `pi` | `cd ~/projects/red-horse && mise exec node@22.19.0 -- pi` | `~/projects/red-horse` |
 
 ## Non-Goals
 
