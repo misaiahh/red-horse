@@ -1,2 +1,3 @@
 [tools]
 node = "22.19"
+pi = "latest"

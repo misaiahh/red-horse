@@ -53,17 +53,16 @@ Usage:
 
 Config file: ~/.config/red-horse/config.json
 
-If no windows are defined in config, defaults are used:
+If no windows are defined in config (or all are commented out), defaults are used:
   1. llama  → cd ~/projects/llama-pi && ./run-server.sh
   2. pi     → mise exec node@$NODE_VERSION -- pi
 
-To customize, create a config with a "windows" array:
+To customize, uncomment and edit the example windows in the config:
   {
-    "session": "red-horse-session",
-    "windows": [
-      { "dir": "~/projects/my-project", "command": "nvim" },
-      { "dir": "~/projects/other", "command": "top" }
-    ]
+    // "windows": [
+    //   { "dir": "~/projects/my-project", "command": "nvim" },
+    //   { "dir": "~/projects/other", "command": "top" }
+    // ]
   }
 
 Each window entry:
@@ -89,6 +88,16 @@ expand_path() {
   echo "$p"
 }
 
+# Strip JSON comments (// style) so jq can parse config files with examples
+strip_comments() {
+  sed 's|//.*||g'
+}
+
+# Read config file with comments stripped for jq parsing
+read_config_json() {
+  cat "$CONFIG_FILE" | strip_comments
+}
+
 # ─── Dependency checks ───────────────────────────────────────────────────────
 
 check_deps() {
@@ -105,7 +114,7 @@ config_exists() {
 # Check if the windows array is non-empty
 has_windows() {
   local count
-  count=$(jq '.windows | if type == "array" then length else 0 end' "$CONFIG_FILE" 2>/dev/null || echo 0)
+  count=$(read_config_json | jq '.windows | if type == "array" then length else 0 end' 2>/dev/null || echo 0)
   [[ "$count" -gt 0 ]]
 }
 
@@ -114,14 +123,11 @@ has_windows() {
 # Verify the required Node version is installed via mise
 check_node_version() {
   command -v mise >/dev/null 2>&1 || die "mise is required but not installed. Install with: brew install mise"
-  mise activate bash >/dev/null 2>&1 || true
-  local installed
-  installed=$(mise which node 2>/dev/null || true)
-  if [[ -z "$installed" ]]; then
+  local actual_version
+  actual_version=$(mise exec node@$NODE_VERSION -- node --version 2>/dev/null | sed 's/v//')
+  if [[ -z "$actual_version" ]]; then
     die "Node $NODE_VERSION is not installed via mise. Install it with: mise install node@$NODE_VERSION"
   fi
-  local actual_version
-  actual_version=$($installed --version 2>/dev/null | sed 's/v//')
   if [[ "$actual_version" != "$NODE_VERSION" ]]; then
     die "Expected Node $NODE_VERSION but found $actual_version. Install the correct version with: mise install node@$NODE_VERSION"
   fi
@@ -130,9 +136,8 @@ check_node_version() {
 # Verify pi is installed in the project's Node version
 check_pi() {
   command -v mise >/dev/null 2>&1 || die "mise is required but not installed. Install with: brew install mise"
-  mise activate bash >/dev/null 2>&1 || true
   local pi_path
-  pi_path=$(mise which pi 2>/dev/null || true)
+  pi_path=$(mise exec node@$NODE_VERSION -- which pi 2>/dev/null || true)
   if [[ -z "$pi_path" ]]; then
     die "pi is not installed in node@$NODE_VERSION. Install it with: npm install -g @earendil-works/pi-coding-agent"
   fi
@@ -151,7 +156,7 @@ get_default_windows() {
   },
   {
     "dir": "~/projects/red-horse",
-    "command": "mise exec node@$NODE_VERSION -- pi",
+    "command": "eval \"$(mise shell node@$NODE_VERSION)\" && set -a && pi && set +a",
     "name": "pi"
   }
 ]
@@ -162,21 +167,35 @@ EOF
 
 cmd_init() {
   if config_exists; then
-    die "Config already exists at $CONFIG_FILE. Remove it first to overwrite."
+    return 0
   fi
 
   mkdir -p "$CONFIG_DIR"
 
   cat > "$CONFIG_FILE" <<'EOF'
 {
-  "session": "red-horse-session",
-  "windows": []
+  // Session name (optional, defaults to "red-horse-session")
+  // "session": "red-horse-session",
+
+  // Windows to create in the session
+  // "windows": [
+  //   {
+  //     "dir": "~/projects/my-project",
+  //     "command": "nvim",
+  //     "name": "project"
+  //   },
+  //   {
+  //     "dir": "~/projects/other",
+  //     "command": "top",
+  //     "skip_command": true
+  //   }
+  // ]
 }
 EOF
 
-  info "Default config created at $CONFIG_FILE"
-  info "Run 'rh' to launch with default windows (llama + pi)."
-  info "Edit $CONFIG_FILE to customize."
+  info "Config created at $CONFIG_FILE"
+  info "Uncomment the example windows above to use them, or add your own."
+  info "Then run 'rh' to launch the session."
 }
 
 # ─── --destroy ───────────────────────────────────────────────────────────────
@@ -226,15 +245,15 @@ cmd_launch() {
     die "Config not found at $CONFIG_FILE. Run 'rh --init' to create it."
   fi
 
-  # Validate JSON
-  if ! jq empty "$CONFIG_FILE" 2>/dev/null; then
+  # Validate JSON (strip // comments first — jq doesn't support them)
+  if ! read_config_json | jq empty 2>/dev/null; then
     die "Config at $CONFIG_FILE is not valid JSON."
   fi
 
   # Determine window source
   local windows_json
   if has_windows; then
-    windows_json=$(jq '.windows' "$CONFIG_FILE")
+    windows_json=$(read_config_json | jq '.windows')
   else
     windows_json=$(get_default_windows)
   fi
