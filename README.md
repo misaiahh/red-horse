@@ -87,7 +87,7 @@ Add this to your `~/.zshrc` (or `~/.bashrc`):
 ### Option A: Alias to local script (simplest)
 
 ```bash
-alias rh='bash ~/SideProjects/red-horse/red-horse.sh'
+alias rh='bash ~/SideProjects/red-horse/rh.sh'
 ```
 
 ### Option B: Put red-horse in PATH
