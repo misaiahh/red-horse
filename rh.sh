@@ -109,6 +109,24 @@ has_windows() {
   [[ "$count" -gt 0 ]]
 }
 
+# ─── Node version check ──────────────────────────────────────────────────────
+
+# Verify the required Node version is installed via mise
+check_node_version() {
+  command -v mise >/dev/null 2>&1 || die "mise is required but not installed. Install with: brew install mise"
+  mise activate bash >/dev/null 2>&1 || true
+  local installed
+  installed=$(mise which node 2>/dev/null || true)
+  if [[ -z "$installed" ]]; then
+    die "Node $NODE_VERSION is not installed via mise. Install it with: mise install node@$NODE_VERSION"
+  fi
+  local actual_version
+  actual_version=$($installed --version 2>/dev/null | sed 's/v//')
+  if [[ "$actual_version" != "$NODE_VERSION" ]]; then
+    die "Expected Node $NODE_VERSION but found $actual_version. Install the correct version with: mise install node@$NODE_VERSION"
+  fi
+}
+
 # ─── Default windows ─────────────────────────────────────────────────────────
 
 # Returns JSON array of default windows
@@ -173,7 +191,7 @@ cmd_help() {
 NODE_VERSION="22.19.0"
 
 cmd_pi() {
-  command -v mise >/dev/null 2>&1 || die "mise is required but not installed. Install with: brew install mise"
+  check_node_version
   info "Launching pi with node@$NODE_VERSION via mise..."
   mise exec node@$NODE_VERSION -- pi
 }
@@ -186,6 +204,9 @@ cmd_launch() {
   if [[ "${1:-}" == "--no-attach" ]]; then
     no_attach=true
   fi
+
+  # Check Node version
+  check_node_version
 
   # Check config
   if ! config_exists; then
