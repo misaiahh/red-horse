@@ -127,6 +127,17 @@ check_node_version() {
   fi
 }
 
+# Verify pi is installed in the project's Node version
+check_pi() {
+  command -v mise >/dev/null 2>&1 || die "mise is required but not installed. Install with: brew install mise"
+  mise activate bash >/dev/null 2>&1 || true
+  local pi_path
+  pi_path=$(mise which pi 2>/dev/null || true)
+  if [[ -z "$pi_path" ]]; then
+    die "pi is not installed in node@$NODE_VERSION. Install it with: npm install -g @earendil-works/pi-coding-agent"
+  fi
+}
+
 # ─── Default windows ─────────────────────────────────────────────────────────
 
 # Returns JSON array of default windows
@@ -192,6 +203,7 @@ NODE_VERSION="22.19.0"
 
 cmd_pi() {
   check_node_version
+  check_pi
   info "Launching pi with node@$NODE_VERSION via mise..."
   mise exec node@$NODE_VERSION -- pi
 }
@@ -205,8 +217,9 @@ cmd_launch() {
     no_attach=true
   fi
 
-  # Check Node version
+  # Check Node version and pi
   check_node_version
+  check_pi
 
   # Check config
   if ! config_exists; then
