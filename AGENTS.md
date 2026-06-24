@@ -28,7 +28,7 @@ Single-file bash project. Everything lives in `rh.sh`; `rh` is a thin wrapper th
 | `command` | string | `"nvim"` | Sent via `tmux send-keys`. |
 | `name` | string | slugified `dir` basename | Lowercase, spaces/slashes → `-`, collapsed. |
 | `skip_command` | boolean | `false` | Skips `tmux send-keys` for this window. |
-| `active` | boolean | `false` | First `active: true` window is selected via `tmux select-window` after all windows are created. If none, falls back to last created window. |
+| `activate_on_start` | boolean | `false` | First `activate_on_start: true` window is selected via `tmux select-window` after all windows are created. If none, falls back to last created window. |
 
 ## Commands
 
@@ -38,7 +38,7 @@ Single-file bash project. Everything lives in `rh.sh`; `rh` is a thin wrapper th
 | `rh --no-attach` | Same as above but skip `tmux attach-session` |
 | `rh --pi` | Check node ≥ 22.19.0 + pi installed → exec `pi` via mise |
 | `rh --init` | Create `~/.config/red-horse/config.json` with commented-out examples (idempotent) |
-| `rh --destroy` | `tmux kill-session -t red-horse-session` |
+| `rh --destroy` | `tmux kill-session -t red-horse-session` | **⚠️ Kills the llama-server process running in the "llama" window. You must restart it before subsequent tasks will work.** <br>🔒 **Testing constraint:** When testing changes to `rh.sh`, do NOT use `--destroy` — it kills the llama-server and breaks AI tasks. Instead, use `tmux kill-session -t red-horse-session` manually from within tmux, or test with a non-conflicting session by temporarily changing `SESSION_NAME` in a copy of the script. |
 | `rh --help` / `-h` | Print usage from `usage()` heredoc |
 
 ## Launch Flow (cmd_launch)
@@ -50,7 +50,7 @@ Single-file bash project. Everything lives in `rh.sh`; `rh` is a thin wrapper th
 5. Create first window with `tmux new-session -d -s red-horse-session -n <name> -c <dir>`
 6. Create remaining windows with `tmux new-window -t red-horse-session -n <name> -c <dir>`
 7. Send command to each window (unless `skip_command: true`)
-8. `tmux select-window -t red-horse-session:<active_name_or_last>`
+8. `tmux select-window -t red-horse-session:<active_idx_or_last>` (selected by integer index, not name)
 9. `tmux attach-session -t red-horse-session`
 
 ## Key Constants
@@ -71,6 +71,7 @@ NODE_VERSION="22.19.0"
 - `expand_path()` — expands `~` to `$HOME`
 - `strip_comments()` — `sed 's|//.*||g'`
 - `read_config_json()` — `cat config | strip_comments`
+- `normalize_config_json()` — strip comments → alias kebab-case keys → type-validate → jq defaults
 - `has_windows()` — jq check if `.windows` is a non-empty array
 - `check_deps()` — verify `jq` and `tmux` in PATH
 - `check_node_version()` — verify mise + node ≥ NODE_VERSION
@@ -81,23 +82,25 @@ NODE_VERSION="22.19.0"
 ```json
 [
   { "dir": "~/projects/llama-pi", "skip_command": true, "name": "llama" },
-  { "dir": "~/projects/red-horse", "command": "pi", "name": "pi", "active": true }
+  { "dir": "~/projects/red-horse", "command": "pi", "name": "pi", "activate_on_start": true }
 ]
 ```
 
 ## Common Patterns / Pitfalls
 
+- **Local config drift:** The local config at `~/.config/red-horse/config.json` is never auto-updated. If a config key changes (e.g., `active` → `activate-on-start`), you **must** update the local config file manually to reflect the new key. The repo's `config.example.json` is just a reference — it does not affect the installed config.
 - **JSON comments:** Config files use `//` comments. Always pipe through `strip_comments` before `jq`. Never use `jq` directly on raw config.
 - **`has_windows` logic:** Empty array `[]` → uses defaults. Non-empty → uses config only. This is the fallback boundary.
-- **`active` semantics:** Only the FIRST `active: true` window is selected. Subsequent `active: true` entries are ignored. Falls back to last created window if none are active.
+- **`activate_on_start` semantics:** Only the FIRST `activate_on_start: true` window is selected. Subsequent `activate_on_start: true` entries are ignored. Falls back to last created window if none are set.
 - **`--no-attach` on existing session:** Exits immediately (doesn't re-create). All other existing-session cases attach.
-- **Directory check:** Windows with missing `dir` are skipped mid-loop. `last_name` and `active_name` are only updated for successfully created windows.
+- **Directory check:** Windows with missing `dir` are skipped mid-loop. `last_idx` and `activate_on_start_idx` are only updated for successfully created windows. Window selection uses integer indices (not names) for reliable tmux targeting.
 - **`set -euo pipefail`:** Script fails on any error. Use `|| true` or `|| die "..."` to handle expected failures.
 
 ## History of Changes
 
 | Commit | Change |
 |--------|--------|
+| `04f9822` | Renamed `active` → `activate_on_start`; added `normalize_config_json()` for kebab-case support; switched to tmux integer indices for window selection |
 | `b40a085` | Fixed node/pi version resolution issues (mise exec workaround) |
 | `6cc55ba` | Added JSON comment support, improved pi window reliability |
 | `2bb60c2` | Added pi installation check |
@@ -105,6 +108,10 @@ NODE_VERSION="22.19.0"
 | `b9959f6` | Fixed node version and relative paths |
 | `3f207f1` | Fixed `rh` alias |
 | `2fc9b67` | Initial commit |
+
+## ⚠️ Important: Destroying the session kills llama-server
+
+The default config includes a "llama" window that runs `./run-server.sh` (local llama-server). Running `rh --destroy` kills the entire tmux session, which **terminates the llama-server process**. After destroying and re-launching with `rh`, you must manually restart the llama-server in the "llama" window before any AI-powered tasks will work.
 
 ## TODO / Known Gaps
 

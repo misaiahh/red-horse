@@ -70,7 +70,7 @@ Each window entry:
   command  (optional)   Command to run (defaults to "nvim")
   name     (optional)   Window name (defaults to slugified dir basename)
   skip_command  (optional)  If true, navigates to dir but doesn't run command
-  active   (optional)   If true, this window is activated after creation (only the first active: true window is selected)
+  activate_on_start  (optional)   If true, this window is activated after creation (only the first activate_on_start: true window is selected)
 EOF
   exit 0
 }
@@ -99,14 +99,44 @@ read_config_json() {
   cat "$CONFIG_FILE" | strip_comments
 }
 
+# ─── Config helpers ──────────────────────────────────────────────────────────
+
+# Config key aliases (hyphen → underscore)
+_KEY_MAP='{"activate-on-start":"activate_on_start","skip-command":"skip_command"}'
+
+# Normalize config: strip comments → alias kebab-case keys to snake_case →
+# strip keys whose values don't match the expected type (so jq defaults kick in).
+# Usage: normalize_config_json | jq '.windows'
+normalize_config_json() {
+  cat "$CONFIG_FILE" | strip_comments | jq --argjson KEY_MAP "$_KEY_MAP" '
+    def normalize:
+      if type == "object" then
+        with_entries(
+          .key as $orig |
+          ($KEY_MAP[$orig] // .key) as $new_key |
+          if $new_key == "skip_command" or $new_key == "activate_on_start" then
+            if (.value | type) == "boolean" then
+              {key: $new_key, value: .value}
+            else empty end
+          elif $new_key == "dir" or $new_key == "command" or $new_key == "name" then
+            if (.value | type) == "string" then
+              {key: $new_key, value: .value}
+            else empty end
+          else
+            {key: $new_key, value: (.value | normalize)}
+          end
+        )
+      else . end;
+    walk(normalize)
+  '
+}
+
 # ─── Dependency checks ───────────────────────────────────────────────────────
 
 check_deps() {
   command -v jq    >/dev/null 2>&1 || die "jq is required but not installed. Install with: brew install jq"
   command -v tmux  >/dev/null 2>&1 || die "tmux is required but not installed. Install with: brew install tmux"
 }
-
-# ─── Config helpers ──────────────────────────────────────────────────────────
 
 config_exists() {
   [[ -f "$CONFIG_FILE" ]]
@@ -115,7 +145,7 @@ config_exists() {
 # Check if the windows array is non-empty
 has_windows() {
   local count
-  count=$(read_config_json | jq '.windows | if type == "array" then length else 0 end' 2>/dev/null || echo 0)
+  count=$(normalize_config_json | jq '.windows | if type == "array" then length else 0 end' 2>/dev/null || echo 0)
   [[ "$count" -gt 0 ]]
 }
 
@@ -160,7 +190,7 @@ get_default_windows() {
     "dir": "~/projects/red-horse",
     "command": "pi",
     "name": "pi",
-    "active": true
+    "activate_on_start": true
   }
 ]
 EOF
@@ -196,7 +226,7 @@ cmd_init() {
   //     "dir": "~/projects/important",
   //     "command": "nvim",
   //     "name": "important",
-  //     "active": true
+  //     "activate_on_start": true
   //   }
   // ]
 }
@@ -262,7 +292,7 @@ cmd_launch() {
   # Determine window source
   local windows_json
   if has_windows; then
-    windows_json=$(read_config_json | jq '.windows')
+    windows_json=$(normalize_config_json | jq '.windows')
   else
     windows_json=$(get_default_windows)
   fi
@@ -291,16 +321,17 @@ cmd_launch() {
 
   # Parse and create each window
   local first=true
-  local active_name=""
-  local last_name=""
+  local activate_on_start_idx=""
+  local last_idx=""
+  local tmux_idx=0
   for (( i=0; i<window_count; i++ )); do
-    local dir command name skip_cmd active
+    local dir command name skip_cmd activate_on_start
 
     dir=$(echo "$windows_json" | jq -r ".[$i].dir")
     command=$(echo "$windows_json" | jq -r ".[$i].command // \"nvim\"")
     name=$(echo "$windows_json" | jq -r ".[$i].name // empty")
     skip_cmd=$(echo "$windows_json" | jq -r ".[$i].skip_command // false")
-    active=$(echo "$windows_json" | jq -r ".[$i].active // false")
+    activate_on_start=$(echo "$windows_json" | jq -r ".[$i].activate_on_start // false")
 
     # Expand ~ in dir
     dir=$(expand_path "$dir")
@@ -318,10 +349,10 @@ cmd_launch() {
       continue
     fi
 
-    # Track last created window and first active window
-    last_name="$name"
-    if [[ "$active" == "true" && -z "$active_name" ]]; then
-      active_name="$name"
+    # Track last created window index and first activate_on_start window index (use actual tmux index)
+    last_idx=$tmux_idx
+    if [[ "$activate_on_start" == "true" && -z "$activate_on_start_idx" ]]; then
+      activate_on_start_idx=$tmux_idx
     fi
 
     if [[ "$first" == true ]]; then
@@ -333,6 +364,8 @@ cmd_launch() {
       tmux new-window -t "$SESSION_NAME" -n "$name" -c "$dir"
     fi
 
+    tmux_idx=$((tmux_idx + 1))
+
     # Send command to the window (unless skip_command is true)
     if [[ "$skip_cmd" != "true" ]]; then
       tmux send-keys -t "$SESSION_NAME:$name" "$command" Enter
@@ -341,10 +374,10 @@ cmd_launch() {
     info "  Window '$name': dir=$dir cmd=$command"
   done
 
-  # Activate the first active window (or fall back to last created)
-  local target_name="${active_name:-$last_name}"
-  if [[ -n "$target_name" ]]; then
-    tmux select-window -t "$SESSION_NAME:$target_name"
+  # Activate the first activate_on_start window (or fall back to last created)
+  local target_idx="${activate_on_start_idx:-$last_idx}"
+  if [[ -n "$target_idx" ]]; then
+    tmux select-window -t "$SESSION_NAME:$target_idx"
   fi
 
   # Attach

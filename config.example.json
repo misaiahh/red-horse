@@ -10,7 +10,7 @@
       "dir": "~/projects/red-horse",
       "command": "mise exec node@22.19.0 -- pi",
       "name": "pi",
-      "active": true
+      "activate_on_start": true
     }
   ]
 }
