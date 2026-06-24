@@ -12,15 +12,13 @@
 #
 # Config: ~/.config/red-horse/config.json
 #
-# If no windows are defined in config, defaults are used:
-#   1. llama  → cd ~/projects/llama-pi && ./run-server.sh
-#   2. pi     → pi (uses mise-managed Node ≥ $NODE_VERSION)
+# Windows must be defined in config — no defaults.
 
 set -euo pipefail
 
 # ─── Constants ───────────────────────────────────────────────────────────────
 
-SESSION_NAME="red-horse-session"
+SESSION_NAME="rh"
 CONFIG_DIR="$HOME/.config/red-horse"
 CONFIG_FILE="$CONFIG_DIR/config.json"
 
@@ -53,11 +51,7 @@ Usage:
 
 Config file: ~/.config/red-horse/config.json
 
-If no windows are defined in config (or all are commented out), defaults are used:
-  1. llama  → cd ~/projects/llama-pi && ./run-server.sh
-  2. pi     → pi (uses mise-managed Node ≥ $NODE_VERSION)
-
-To customize, uncomment and edit the example windows in the config:
+Windows must be defined — uncomment and edit the example windows below:
   {
     // "windows": [
     //   { "dir": "~/projects/my-project", "command": "nvim" },
@@ -175,27 +169,6 @@ check_pi() {
   fi
 }
 
-# ─── Default windows ─────────────────────────────────────────────────────────
-
-# Returns JSON array of default windows
-get_default_windows() {
-  cat <<EOF
-[
-  {
-    "dir": "~/projects/llama-pi",
-    "skip_command": true,
-    "name": "llama"
-  },
-  {
-    "dir": "~/projects/red-horse",
-    "command": "pi",
-    "name": "pi",
-    "activate_on_start": true
-  }
-]
-EOF
-}
-
 # ─── --init ──────────────────────────────────────────────────────────────────
 
 cmd_init() {
@@ -207,8 +180,8 @@ cmd_init() {
 
   cat > "$CONFIG_FILE" <<'EOF'
 {
-  // Session name (optional, defaults to "red-horse-session")
-  // "session": "red-horse-session",
+  // Session name (optional, defaults to "rh")
+  // "session": "rh",
 
   // Windows to create in the session
   // "windows": [
@@ -289,20 +262,20 @@ cmd_launch() {
     die "Config at $CONFIG_FILE is not valid JSON."
   fi
 
-  # Determine window source
-  local windows_json
-  if has_windows; then
-    windows_json=$(normalize_config_json | jq '.windows')
-  else
-    windows_json=$(get_default_windows)
+  # Check windows are defined (no defaults)
+  if ! has_windows; then
+    die "No windows defined in config. Edit $CONFIG_FILE and add at least one window."
   fi
+
+  local windows_json
+  windows_json=$(normalize_config_json | jq '.windows')
 
   # Count windows
   local window_count
   window_count=$(echo "$windows_json" | jq 'length')
 
   if [[ "$window_count" -eq 0 ]]; then
-    die "No windows defined in config and no defaults available."
+    die "No windows defined in config. Edit $CONFIG_FILE and add at least one window."
   fi
 
   # Check if session already exists
