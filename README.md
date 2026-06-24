@@ -26,12 +26,7 @@ mise install
 rh --init
 ```
 
-This creates `~/.config/red-horse/config.json` with example windows commented out. With no windows defined (or all commented out), red-horse falls back to two default windows:
-
-| Window | Command | Directory |
-|--------|---------|-----------|
-| `llama` | `./run-server.sh` | `~/projects/llama-pi` |
-| `pi` | `pi` (uses mise-managed Node ≥ 22.19.0) | `~/projects/red-horse` |
+This creates `~/.config/red-horse/config.json` with example windows commented out. Uncomment and edit them before launching.
 
 ### 2. Launch
 
@@ -39,7 +34,7 @@ This creates `~/.config/red-horse/config.json` with example windows commented ou
 rh
 ```
 
-This creates a tmux session named `red-horse-session` with the configured (or default) windows, then attaches to it.
+This creates a tmux session named `rh` with the configured windows, then attaches to it.
 
 ### 3. Customize
 
@@ -47,10 +42,8 @@ Edit `~/.config/red-horse/config.json`:
 
 ```json
 {
-  "session": "red-horse-session",
+  "session": "rh",
   "windows": [
-    { "dir": "~/projects/llama-pi", "skip_command": true, "name": "llama" },
-    { "dir": "~/projects/red-horse", "command": "pi", "name": "pi", "activate_on_start": true },
     { "dir": "~/projects/my-project", "command": "nvim" },
     { "dir": "~/projects/other-project" }
   ]
@@ -116,28 +109,16 @@ Full config file at `~/.config/red-horse/config.json`:
 
 ```json
 {
-  "session": "red-horse-session",
+  "session": "rh",
   "windows": [
-    { "dir": "~/projects/llama-pi", "skip_command": true, "name": "llama" },
     { "dir": "~/projects/my-project", "command": "nvim" },
     { "dir": "~/projects/logs" }
   ]
 }
 ```
 
-- **`session`** — tmux session name (default: `red-horse-session`)
-- **`windows`** — array of window definitions
-  - If empty or omitted, defaults to `llama` + `pi` windows
-  - If present (even with one entry), uses only the defined windows
-
-## Default Windows
-
-When no windows are defined in config, these two are used:
-
-| Window | Command | Directory |
-|--------|---------|-----------|
-| `llama` | `cd ~/projects/llama-pi && ./run-server.sh` | `~/projects/llama-pi` |
-| `pi` | `cd ~/projects/red-horse && pi` | `~/projects/red-horse` |
+- **`session`** — tmux session name (default: `rh`)
+- **`windows`** — array of window definitions (required; no defaults)
 
 ## Non-Goals
 
