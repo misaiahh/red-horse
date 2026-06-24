@@ -26,7 +26,7 @@ mise install
 rh --init
 ```
 
-This creates `~/.config/red-horse/config.json` with an empty window list. With no windows defined, red-horse falls back to two default windows:
+This creates `~/.config/red-horse/config.json` with example windows commented out. With no windows defined (or all commented out), red-horse falls back to two default windows:
 
 | Window | Command | Directory |
 |--------|---------|-----------|
@@ -50,7 +50,7 @@ Edit `~/.config/red-horse/config.json`:
   "session": "red-horse-session",
   "windows": [
     { "dir": "~/projects/llama-pi", "skip_command": true, "name": "llama" },
-    { "dir": "~/projects/red-horse", "command": "pi", "name": "pi" },
+    { "dir": "~/projects/red-horse", "command": "pi", "name": "pi", "activate_on_start": true },
     { "dir": "~/projects/my-project", "command": "nvim" },
     { "dir": "~/projects/other-project" }
   ]
@@ -65,6 +65,7 @@ Each window entry:
 | `command` | No | `nvim` | Command to run when the window opens |
 | `name` | No | Slugified `dir` basename | Tmux window name |
 | `skip_command` | No | `false` | If `true`, navigates to `dir` but doesn't run any command |
+| `activate_on_start` | No | `false` | If `true`, this window is activated after creation (only the first `activate_on_start: true` window is selected) |
 
 ### 4. Re-launch / Re-attach
 
