@@ -70,6 +70,7 @@ Each window entry:
   command  (optional)   Command to run (defaults to "nvim")
   name     (optional)   Window name (defaults to slugified dir basename)
   skip_command  (optional)  If true, navigates to dir but doesn't run command
+  active   (optional)   If true, this window is activated after creation (only the first active: true window is selected)
 EOF
   exit 0
 }
@@ -158,7 +159,8 @@ get_default_windows() {
   {
     "dir": "~/projects/red-horse",
     "command": "pi",
-    "name": "pi"
+    "name": "pi",
+    "active": true
   }
 ]
 EOF
@@ -189,6 +191,12 @@ cmd_init() {
   //     "dir": "~/projects/other",
   //     "command": "top",
   //     "skip_command": true
+  //   },
+  //   {
+  //     "dir": "~/projects/important",
+  //     "command": "nvim",
+  //     "name": "important",
+  //     "active": true
   //   }
   // ]
 }
@@ -283,13 +291,16 @@ cmd_launch() {
 
   # Parse and create each window
   local first=true
+  local active_name=""
+  local last_name=""
   for (( i=0; i<window_count; i++ )); do
-    local dir command name skip_cmd
+    local dir command name skip_cmd active
 
     dir=$(echo "$windows_json" | jq -r ".[$i].dir")
     command=$(echo "$windows_json" | jq -r ".[$i].command // \"nvim\"")
     name=$(echo "$windows_json" | jq -r ".[$i].name // empty")
     skip_cmd=$(echo "$windows_json" | jq -r ".[$i].skip_command // false")
+    active=$(echo "$windows_json" | jq -r ".[$i].active // false")
 
     # Expand ~ in dir
     dir=$(expand_path "$dir")
@@ -305,6 +316,12 @@ cmd_launch() {
     if [[ ! -d "$dir" ]]; then
       warn "Directory '$dir' does not exist. Skipping window '$name'."
       continue
+    fi
+
+    # Track last created window and first active window
+    last_name="$name"
+    if [[ "$active" == "true" && -z "$active_name" ]]; then
+      active_name="$name"
     fi
 
     if [[ "$first" == true ]]; then
@@ -323,6 +340,12 @@ cmd_launch() {
 
     info "  Window '$name': dir=$dir cmd=$command"
   done
+
+  # Activate the first active window (or fall back to last created)
+  local target_name="${active_name:-$last_name}"
+  if [[ -n "$target_name" ]]; then
+    tmux select-window -t "$SESSION_NAME:$target_name"
+  fi
 
   # Attach
   if [[ "$no_attach" == false ]]; then
